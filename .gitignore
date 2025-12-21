@@ -57,3 +57,13 @@ nunit-*.xml
 .vs/
 .vs/**/CopilotIndices/
 .vs/**/CopilotIndices/**
+
+# Local SQLite DBs and temporary SQLite journal files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+# or project-specific
+tictactoe.db
+tictactoe.db-shm
+tictactoe.db-wal

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
+using TicTacToe.Exceptions;
 
 namespace TicTacToe.Middleware
 {
@@ -40,6 +41,7 @@ namespace TicTacToe.Middleware
                 ArgumentException => ((int)HttpStatusCode.BadRequest, "Invalid request"),
                 InvalidOperationException => ((int)HttpStatusCode.BadRequest, "Invalid operation"),
                 UnauthorizedAccessException => ((int)HttpStatusCode.Unauthorized, "Unauthorized"),
+                NotFoundException => ((int)HttpStatusCode.NotFound, "Not found"),
                 _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred")
             };
 

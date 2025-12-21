@@ -1,0 +1,39 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TicTacToe.Services;
+
+namespace TicTacToe.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class GamesController : ControllerBase
+{
+    private readonly IGamesService _gamesService;
+
+    public GamesController(IGamesService gamesService)
+    {
+        _gamesService = gamesService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var games = await _gamesService.GetGamesAsync(page, pageSize);
+        return Ok(games);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create()
+    {
+        var gameId = await _gamesService.CreateGameAsync();
+        return Created();
+    }
+
+    [HttpGet("{gameId:int}/board")]
+    public async Task<IActionResult> GameStatus([FromRoute] int gameId)
+    {
+        var status = await _gamesService.GetGameBoardByIdAsync(gameId);
+        return Ok(status);
+    }
+}
