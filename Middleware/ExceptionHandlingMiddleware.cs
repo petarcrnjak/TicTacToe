@@ -1,0 +1,62 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
+using System.Diagnostics;
+using System.Net;
+using System.Text.Json;
+
+namespace TicTacToe.Middleware
+{
+    public sealed class ExceptionHandlingMiddleware
+    {
+        private readonly RequestDelegate _next;
+        private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+        private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+        public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+        {
+            _next = next;
+            _logger = logger;
+        }
+
+        public async Task InvokeAsync(HttpContext httpContext)
+        {
+            try
+            {
+                await _next(httpContext);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unhandled exception occurred while processing the request.");
+
+                await HandleExceptionAsync(httpContext, ex);
+            }
+        }
+
+        private static Task HandleExceptionAsync(HttpContext httpContext, Exception ex)
+        {
+            var (status, title) = ex switch
+            {
+                ArgumentException => ((int)HttpStatusCode.BadRequest, "Invalid request"),
+                InvalidOperationException => ((int)HttpStatusCode.BadRequest, "Invalid operation"),
+                UnauthorizedAccessException => ((int)HttpStatusCode.Unauthorized, "Unauthorized"),
+                _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred")
+            };
+
+            var problem = new ProblemDetails
+            {
+                Type = $"https://httpstatuses.io/{status}",
+                Title = title,
+                Status = status,
+                Detail = ex.Message,
+                Instance = httpContext.Request.Path
+            };
+            problem.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+
+            httpContext.Response.ContentType = "application/problem+json";
+            httpContext.Response.StatusCode = status;
+
+            return httpContext.Response.WriteAsJsonAsync(problem);
+        }
+    }
+}
