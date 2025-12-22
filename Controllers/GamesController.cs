@@ -45,10 +45,10 @@ public class GamesController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("{gameId:int}/move")]
+    [HttpPost("{gameId:int}/play")]
     public async Task<IActionResult> MakeMove([FromRoute] int gameId, [FromBody] GameMove move)
     {
-        var result = await _gamesService.MakeMoveAsync(gameId, move);
+        var result = await _gamesService.PlayGameAsync(gameId, move);
         return Ok(result);
     }
 }

@@ -12,6 +12,7 @@ public static class GameDtoExtensions
             Id = g.Id,
             PlayerX = g.PlayerX,
             PlayerO = g.PlayerO,
+            Board = g.Board,
             NextTurn = g.NextTurn,
             Winner = g.Winner,
             CreatedAt = g.CreatedAt,
@@ -52,7 +53,7 @@ public static class FieldStatusDtoExtensions
     public static GameFieldDto ToBoardDto(this Games g) =>
         new()
         {
-            Board = g.Board.ToDisplayBoard(),
+            Board = g.Board.ToDisplayBoardParts(),
             NextTurn = g.NextTurn
         };
 }

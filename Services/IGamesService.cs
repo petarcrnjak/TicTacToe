@@ -9,6 +9,6 @@ namespace TicTacToe.Services
         Task<List<GameDto>> GetGamesAsync(int page, int pageSize, CancellationToken cancellation = default);
         Task<GameFieldDto> GetGameBoardByIdAsync(int gameId, CancellationToken cancellation = default);
         Task<GameStatusDto> JoinGameAsync(int gameId, CancellationToken cancellation = default);
-        Task<GameStatusDto> MakeMoveAsync(int gameId, GameMove move, CancellationToken cancellation = default);
+        Task<GameStatusDto> PlayGameAsync(int gameId, GameMove move, CancellationToken cancellation = default);
     }
 }

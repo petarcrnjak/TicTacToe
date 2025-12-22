@@ -11,7 +11,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     {
     }
 
-    public DbSet<Games> Games { get; set; }=null!;
+    public DbSet<Games> Games { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -21,8 +21,10 @@ public class AppDbContext : IdentityDbContext<AppUser>
         // builder.Entity<AppUser>(b => b.ToTable("Users"));
         builder.Entity<Games>(entity =>
         {
-            entity.ToTable("Games");
-            
+            entity.ToTable("Games")
+            .Property(g => g.Status)
+            .HasComment("GameStatus: 0=Open, 1=InProgress, 2=Finished");
+
             entity.HasOne<AppUser>()
                    .WithMany()
                    .HasForeignKey(g => g.PlayerX)

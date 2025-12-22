@@ -1,4 +1,5 @@
 ﻿using TicTacToe.Enums;
+using TicTacToe.Extensions;
 
 namespace TicTacToe.Database.Models;
 
@@ -7,7 +8,7 @@ public class Games
     public int Id { get; set; }
     public string PlayerX { get; set; } = string.Empty;
     public string PlayerO { get; set; } = string.Empty;
-    public string Board { get; set; } = "0,0,0,0,0,0,0,0,0";
+    public string Board { get; set; } = BoardExtensions.EmptyBoardCsv;
     public string NextTurn { get; set; } = string.Empty;
     public string? Winner { get; set; }
     public DateTime CreatedAt { get; set; }

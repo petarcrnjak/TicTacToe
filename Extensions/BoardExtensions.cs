@@ -4,24 +4,34 @@ namespace TicTacToe.Extensions
 {
     public static class BoardExtensions
     {
-        // Convert stored board (e.g. "0,1,0,0,2,0,0,0,0") -> display board where "0" becomes ""
-        public static string[] ToDisplayBoard(this string? storedBoard)
+        public const string EmptyBoardCsv = "0,0,0,0,0,0,0,0,0";
+
+        public static string[] NormalizeBoard(this string? csv)
         {
-            var parts = (storedBoard ?? string.Join(',', Enumerable.Repeat("0", 9)))
-                .Split(',', StringSplitOptions.None);
+            var parts = (csv ?? EmptyBoardCsv)
+                .Split(',', StringSplitOptions.None)
+                .Select(p => (p ?? string.Empty).Trim())
+                .ToArray();
 
             if (parts.Length != 9)
-                throw new ArgumentException("Board must contain 9 comma-separated cells.", nameof(storedBoard));
+                throw new ArgumentException("Board must contain 9 comma-separated cells.", nameof(csv));
 
-            return parts.Select(p =>
+            for (var i = 0; i < parts.Length; i++)
+                if (string.IsNullOrEmpty(parts[i]))
+                    parts[i] = "0";
+
+            return parts;
+        }
+
+        public static string[] ToDisplayBoardParts(this string? storedBoard)
+        {
+            var parts = storedBoard.NormalizeBoard();
+            return parts.Select(p => p switch
             {
-                return p switch
-                {
-                    "0" => string.Empty,
-                    "1" => Player.X.ToString(),
-                    "2" => Player.O.ToString(),
-                    _ => p // unexpected values preserved
-                };
+                "0" => string.Empty,
+                "1" => Player.X.ToString(),
+                "2" => Player.O.ToString(),
+                _ => p
             }).ToArray();
         }
     }

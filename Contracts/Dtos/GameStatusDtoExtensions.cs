@@ -11,7 +11,7 @@ public static class GameStatusDtoExtensions
             Id = g.Id,
             PlayerX = g.PlayerX,
             PlayerO = g.PlayerO,
-            Board = g.Board.ToDisplayBoard(),
+            Board = g.Board.ToDisplayBoardParts(),
             NextTurn = g.NextTurn,
             Winner = g.Winner,
             CreatedAt = g.CreatedAt,
