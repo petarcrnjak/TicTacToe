@@ -17,6 +17,29 @@ public static class GameDtoExtensions
             CreatedAt = g.CreatedAt,
             Status = g.Status
         };
+    public static GameViewDto ToViewDto(this Games g) =>
+        new()
+        {
+            Id = g.Id,
+            PlayerX = g.PlayerX,
+            PlayerO = g.PlayerO,
+            Winner = g.Winner,
+            CreatedAt = g.CreatedAt,
+            Status = g.Status.ToString()
+        };
+
+    public static GameFilterDto ToFilterViewDto(this Games g) =>
+        new()
+        {
+            Id = g.Id,
+            PlayerX = g.PlayerX,
+            PlayerO = g.PlayerO,
+            Board = g.Board.ToDisplayBoardParts(),
+            NextTurn = g.NextTurn,
+            Winner = g.Winner,
+            CreatedAt = g.CreatedAt,
+            Status = g.Status.ToString()
+        };
 
     public static bool TryGetPlayerAndOpponent(this GameDto dto, string currentUserId, out Player playerMarker, out string opponentId)
     {

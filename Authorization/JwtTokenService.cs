@@ -1,52 +1,50 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace TicTacToe.Authorization
+namespace TicTacToe.Authorization;
+
+public interface ITokenService
 {
-    public interface ITokenService
+    string GenerateJwt(string userId, string username);
+}
+
+public sealed class JwtTokenService : ITokenService
+{
+    private readonly IConfiguration _config;
+
+    public JwtTokenService(IConfiguration config)
     {
-        string GenerateJwt(string userId, string username);
+        _config = config;
     }
 
-    public sealed class JwtTokenService : ITokenService
+    public string GenerateJwt(string userId, string username)
     {
-        private readonly IConfiguration _config;
+        var issuer = _config["Jwt:Issuer"] ?? "TicTacToe";
+        var audience = _config["Jwt:Audience"] ?? "TicTacToeAudience";
+        var key = _config["Jwt:Key"] ?? "SuperSecretDevKey_ChangeMe!12345";
 
-        public JwtTokenService(IConfiguration config)
+        var claims = new List<Claim>
         {
-            _config = config;
-        }
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(JwtRegisteredClaimNames.UniqueName, username),
+            new(ClaimTypes.NameIdentifier, userId)
+        };
 
-        public string GenerateJwt(string userId, string username)
-        {
-            var issuer = _config["Jwt:Issuer"] ?? "TicTacToe";
-            var audience = _config["Jwt:Audience"] ?? "TicTacToeAudience";
-            var key = _config["Jwt:Key"] ?? "SuperSecretDevKey_ChangeMe!12345";
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            SecurityAlgorithms.HmacSha256
+        );
 
-            var claims = new List<Claim>
-            {
-                new(JwtRegisteredClaimNames.Sub, userId),
-                new(JwtRegisteredClaimNames.UniqueName, username),
-                new(ClaimTypes.NameIdentifier, userId)
-            };
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(2),
+            signingCredentials: credentials
+        );
 
-            var credentials = new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
-                SecurityAlgorithms.HmacSha256
-            );
-
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

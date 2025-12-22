@@ -1,4 +1,6 @@
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using TicTacToe.Enums;
 
 namespace TicTacToe.Extensions
 {
@@ -11,6 +13,15 @@ namespace TicTacToe.Extensions
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "TicTacToe API", Version = "v1" });
+
+                // Map GameStatus enum to string values in Swagger (UI will show "Open", "InProgress", "Finished")
+                c.MapType<GameStatus>(() => new OpenApiSchema
+                {
+                    Type = "string",
+                    Enum = Enum.GetNames<GameStatus>()
+                        .Select(n => new OpenApiString(n) as IOpenApiAny)
+                        .ToList()
+                });
 
                 // JWT Bearer auth
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

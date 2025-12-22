@@ -40,10 +40,16 @@ public sealed class GameService : IGameService
         return id;
     }
 
-    public async Task<List<GameDto>> GetGamesAsync(int page, int pageSize, CancellationToken cancellation = default)
+    public async Task<List<GameViewDto>> GetGamesAsync(int page, int pageSize, CancellationToken cancellation = default)
     {
         var games = await _gamesRepository.GetGamesAsync(page, pageSize, cancellation);
-        return games.Select(g => g.ToDto()).ToList();
+        return games.Select(g => g.ToViewDto()).ToList();
+    }
+
+    public async Task<List<GameFilterDto>> GetGamesFilterAsync(GamesFilter filter, int page, int pageSize, CancellationToken cancellation = default)
+    {
+        var games = await _gamesRepository.GetGamesFilteredAsync(filter, page, pageSize, cancellation);
+        return games.Select(g => g.ToFilterViewDto()).ToList();
     }
 
     public async Task<GameFieldDto> GetGameBoardByIdAsync(int gameId, CancellationToken cancellation = default)

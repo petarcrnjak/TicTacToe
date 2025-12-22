@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicTacToe.Contracts;
+using TicTacToe.Contracts.Requests;
+using TicTacToe.Enums;
 using TicTacToe.Services;
 
 namespace TicTacToe.Controllers;
@@ -21,6 +23,22 @@ public class GamesController : ControllerBase
     public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var games = await _gamesService.GetGamesAsync(page, pageSize);
+        return Ok(games);
+    }
+
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? userId, [FromQuery] DateTime? startedFromUtc, [FromQuery] DateTime? startedToUtc, [FromQuery] GameStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var filter = new GamesFilter
+        {
+            UserId = userId,
+            StartedFromUtc = startedFromUtc,
+            StartedToUtc = startedToUtc,
+            Status = status
+        };
+
+        var games = await _gamesService.GetGamesFilterAsync(filter, page, pageSize);
         return Ok(games);
     }
 
@@ -46,7 +64,7 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost("{gameId:int}/play")]
-    public async Task<IActionResult> MakeMove([FromRoute] int gameId, [FromBody] GameMove move)
+    public async Task<IActionResult> PlayGame([FromRoute] int gameId, [FromBody] GameMove move)
     {
         var result = await _gamesService.PlayGameAsync(gameId, move);
         return Ok(result);

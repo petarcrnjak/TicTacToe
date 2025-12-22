@@ -42,9 +42,18 @@ public sealed class GamesRepository : IGamesRepository
         await connection.OpenAsync(cancellation);
 
         var sql = @"
-            SELECT Id, PlayerX, PlayerO, NextTurn, Winner, CreatedAt, Status
-            FROM Games
-            ORDER BY CreatedAt DESC
+            SELECT g.Id,
+               ux.UserName as PlayerX,
+               uo.UserName as PlayerO,
+               g.NextTurn,
+               g.CreatedAt,
+               g.Status,
+               uw.UserName AS Winner
+            FROM Games as g
+            LEFT JOIN AspNetUsers AS ux ON ux.Id = g.PlayerX
+            LEFT JOIN AspNetUsers AS uo ON uo.Id = g.PlayerO
+            LEFT JOIN AspNetUsers AS uw ON uw.Id = g.Winner
+            ORDER BY g.CreatedAt DESC
             LIMIT @PageSize OFFSET @Offset;";
 
         var rows = await connection.QueryAsync<Games>(
@@ -64,9 +73,10 @@ public sealed class GamesRepository : IGamesRepository
 
 
         return await connection.QuerySingleOrDefaultAsync<Games>(@"
-               SELECT Board, NextTurn
-               FROM Games
-               WHERE Id=@GameId",
+               SELECT Board, u.UserName as NextTurn
+               FROM Games as g
+               LEFT JOIN AspNetUsers AS u ON u.Id = g.NextTurn
+               WHERE g.Id=@GameId",
                 new { GameId = gameId });
     }
 
@@ -156,15 +166,64 @@ public sealed class GamesRepository : IGamesRepository
         return await GetGameByIdAsync(request.GameId, cancellation);
     }
 
-    public async Task<string?> GetBoardAsync(int gameId, string currentUserId, CancellationToken cancellation = default)
+    public async Task<IReadOnlyCollection<Games>> GetGamesFilteredAsync(GamesFilter filter, int page, int pageSize, CancellationToken cancellation = default)
     {
         await using DbConnection connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellation);
 
-        return await connection.QuerySingleOrDefaultAsync<string>(@"
-               SELECT Board
-               FROM Games
-               WHERE Id=@GameId AND Status=@Status",
-                new { GameId = gameId, Status = GameStatus.InProgress });
+        // Build WHERE conditions based on provided filter fields
+        var where = new List<string>();
+        var parameters = new DynamicParameters();
+        parameters.Add("PageSize", pageSize);
+        parameters.Add("Offset", Math.Max(0, (page - 1) * pageSize));
+
+        if (!string.IsNullOrWhiteSpace(filter.UserId))
+        {
+            // match either player slot
+            where.Add("(PlayerX = @UserId OR PlayerO = @UserId)");
+            parameters.Add("UserId", filter.UserId);
+        }
+
+        if (filter.StartedFromUtc.HasValue)
+        {
+            where.Add("StartedAt >= @StartedAfter");
+            parameters.Add("StartedAfter", filter.StartedFromUtc.Value);
+        }
+
+        if (filter.StartedToUtc.HasValue)
+        {
+            where.Add("StartedAt <= @StartedBefore");
+            parameters.Add("StartedBefore", filter.StartedToUtc.Value);
+        }
+
+        if (filter.Status.HasValue)
+        {
+            where.Add("Status = @Status");
+            parameters.Add("Status", (int)filter.Status.Value);
+        }
+
+        var whereSql = where.Count > 0 ? $"WHERE {string.Join(" AND ", where)}" : string.Empty;
+
+        var sql = $@"
+             SELECT g.Id,
+               ux.UserName AS PlayerX,
+               uo.UserName AS PlayerO,
+               un.UserName AS NextTurn,
+               uw.UserName AS Winner,
+               g.Board,
+               g.CreatedAt,
+               g.StartedAt,
+               g.Status
+            FROM Games as g
+            LEFT JOIN AspNetUsers AS ux ON ux.Id = g.PlayerX
+            LEFT JOIN AspNetUsers AS uo ON uo.Id = g.PlayerO
+            LEFT JOIN AspNetUsers AS uw ON uw.Id = g.Winner
+            LEFT JOIN AspNetUsers AS un ON un.Id = g.NextTurn
+            {whereSql}
+            ORDER BY CreatedAt DESC
+            LIMIT @PageSize OFFSET @Offset;";
+
+        var rows = await connection.QueryAsync<Games>(new CommandDefinition(sql, parameters, cancellationToken: cancellation));
+        return rows.ToList();
     }
 }
