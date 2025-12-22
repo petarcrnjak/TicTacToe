@@ -3,6 +3,7 @@ using TicTacToe.Authorization;
 using TicTacToe.Database;
 using TicTacToe.Database.Repository;
 using TicTacToe.Extensions;
+using TicTacToe.GameEngine;
 using TicTacToe.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,7 +32,8 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<ITokenService, JwtTokenService>()
     .AddScoped<IAuthService, AuthService>()
-    .AddScoped<IGamesService, GamesService>();
+    .AddScoped<IGamesService, GamesService>()
+    .AddScoped<IGameEngine, GameEngine>();
 
 builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqliteConnectionFactory(connectionString));
 

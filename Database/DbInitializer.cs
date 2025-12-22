@@ -23,6 +23,7 @@ public sealed class DbInitializer : IDbInitializer
             PlayerX TEXT,
             PlayerO TEXT,
             Board TEXT NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0',
+            NextTurn TEXT,
             Winner TEXT,
             CreatedAt TEXT NOT NULL,
             StartedAt TEXT,

@@ -1,9 +1,8 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Data.Common;
-using TicTacToe.Contracts.Dtos;
 using TicTacToe.Contracts.Requests;
 using TicTacToe.Database.Models;
+using TicTacToe.Enums;
 
 namespace TicTacToe.Database.Repository;
 
@@ -26,20 +25,10 @@ public sealed class GamesRepository : IGamesRepository
         await using DbConnection connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellation);
 
-        var playerId = request.UserId.ToString();
-        var userExists = await connection.ExecuteScalarAsync<long>(
-            new CommandDefinition("SELECT COUNT(1) FROM AspNetUsers WHERE Id = @Id",
-                                 new { Id = playerId }, cancellationToken: cancellation));
-
-        if (userExists == 0)
-        {
-            throw new InvalidOperationException($"Cannot create game: user '{playerId}' does not exist.");
-        }
-
         var newId = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(insertSql, new
             {
-                PlayerX = playerId,
+                PlayerX = request.UserId.ToString(),
                 CreatedAt = request.CreatedUtc,
                 Status = (int)request.Status
             }, cancellationToken: cancellation));
@@ -53,7 +42,7 @@ public sealed class GamesRepository : IGamesRepository
         await connection.OpenAsync(cancellation);
 
         var sql = @"
-            SELECT Id, PlayerX, PlayerO, Winner, CreatedAt, Status
+            SELECT Id, PlayerX, PlayerO, NextTurn, Winner, CreatedAt, Status
             FROM Games
             ORDER BY CreatedAt DESC
             LIMIT @PageSize OFFSET @Offset;";
@@ -68,16 +57,114 @@ public sealed class GamesRepository : IGamesRepository
         return rows.ToList();
     }
 
-    public async Task<Games?> GetGameBoardById(int gameId, CancellationToken cancellation)
+    public async Task<Games?> GetGameBoardById(int gameId, CancellationToken cancellation = default)
     {
         await using DbConnection connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellation);
 
-     
+
         return await connection.QuerySingleOrDefaultAsync<Games>(@"
-               SELECT Board
+               SELECT Board, NextTurn
                FROM Games
                WHERE Id=@GameId",
                 new { GameId = gameId });
+    }
+
+    public async Task<Games?> GetOpenGameByIdAsync(int gameId, CancellationToken cancellation = default)
+    {
+        await using DbConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellation);
+
+        return await connection.QuerySingleOrDefaultAsync<Games>(@"
+               SELECT Id, PlayerX
+               FROM Games
+               WHERE Id=@GameId AND Status=@Status",
+                new { GameId = gameId, Status = GameStatus.Open });
+    }
+
+    public async Task<bool> JoinGameAsync(int gameId, string player1, string userId, CancellationToken cancellation = default)
+    {
+        const string updateSql = @"
+            UPDATE Games
+            SET PlayerO = @UserId,
+                StartedAt = @StartedAt,
+                Status = @NewStatus,
+                NextTurn=@Player1
+            WHERE Id = @GameId
+              AND Status = @ExpectedStatus
+              AND (PlayerO IS NULL OR PlayerO = '');";
+
+        await using DbConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellation);
+
+        var affected = await connection.ExecuteAsync(
+            new CommandDefinition(updateSql, new
+            {
+                UserId = userId,
+                StartedAt = DateTime.UtcNow,
+                Player1 = player1,
+                NewStatus = (int)GameStatus.InProgress,
+                ExpectedStatus = (int)GameStatus.Open,
+                GameId = gameId
+            }, cancellationToken: cancellation));
+
+        return affected > 0;
+    }
+
+    public async Task<Games?> GetGameByIdAsync(int gameId, CancellationToken cancellation = default)
+    {
+        await using DbConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellation);
+
+        return await connection.QuerySingleOrDefaultAsync<Games>(@"
+               SELECT Id, PlayerX, PlayerO, Board, NextTurn, Winner, CreatedAt, StartedAt, Status
+               FROM Games
+               WHERE Id = @GameId",
+            new { GameId = gameId });
+    }
+
+    public async Task<Games?> MakeMoveAsync(MakeMoveRequest request, CancellationToken cancellation = default)
+    {
+        await using DbConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellation);
+
+        const string updateSql = @"
+            UPDATE Games
+            SET Board = @Board,
+                NextTurn = @NextTurn,
+                Winner = @Winner,
+                Status = @NewStatus
+            WHERE Id = @GameId
+              AND NextTurn = @ExpectedNext
+              AND Status = @ExpectedStatus;";
+
+        var affected = await connection.ExecuteAsync(new CommandDefinition(updateSql, new
+        {
+            Board = request.BoardString,
+            NextTurn = request.PlayerOpponent,
+            Winner = request.Winner,
+            NewStatus = (int)request.Status,
+            GameId = request.GameId,
+            ExpectedNext = request.PlayerMaker,
+            ExpectedStatus = (int)GameStatus.InProgress
+        }, cancellationToken: cancellation));
+
+        if (affected == 0)
+            return null;
+
+        // return updated game
+        return await GetGameByIdAsync(request.GameId, cancellation);
+    }
+
+    public async Task<string?> GetBoardAsync(int gameId, string currentUserId, CancellationToken cancellation = default)
+    {
+        await using DbConnection connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellation);
+
+        return await connection.QuerySingleOrDefaultAsync<string>(@"
+               SELECT Board
+               FROM Games
+               WHERE Id=@GameId AND Status=@Status",
+                new { GameId = gameId, Status = GameStatus.InProgress });
     }
 }

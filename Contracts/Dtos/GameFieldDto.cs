@@ -1,8 +1,7 @@
-﻿using TicTacToe.Enums;
-
-namespace TicTacToe.Contracts.Dtos;
+﻿namespace TicTacToe.Contracts.Dtos;
 
 public sealed record GameFieldDto
 {
-    public string Board { get; init; } = string.Empty;
+    public string[] Board { get; init; } = new string[9];
+    public string NextTurn { get; init; } = string.Empty;
 }

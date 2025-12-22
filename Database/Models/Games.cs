@@ -8,9 +8,9 @@ public class Games
     public string PlayerX { get; set; } = string.Empty;
     public string PlayerO { get; set; } = string.Empty;
     public string Board { get; set; } = "0,0,0,0,0,0,0,0,0";
-    public string Winner { get; set; } = string.Empty;
+    public string NextTurn { get; set; } = string.Empty;
+    public string? Winner { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime StartedAt { get; set; }
     public GameStatus Status { get; set; } = GameStatus.Open;
-
 }

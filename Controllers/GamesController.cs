@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TicTacToe.Contracts;
 using TicTacToe.Services;
 
 namespace TicTacToe.Controllers;
@@ -26,7 +27,7 @@ public class GamesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create()
     {
-        var gameId = await _gamesService.CreateGameAsync();
+        var gameId = await _gamesService.StartGameAsync();
         return Created();
     }
 
@@ -35,5 +36,19 @@ public class GamesController : ControllerBase
     {
         var status = await _gamesService.GetGameBoardByIdAsync(gameId);
         return Ok(status);
+    }
+
+    [HttpPost("{gameId:int}/join")]
+    public async Task<IActionResult> JoinGame([FromRoute] int gameId)
+    {
+        var result = await _gamesService.JoinGameAsync(gameId);
+        return Ok(result);
+    }
+
+    [HttpPost("{gameId:int}/move")]
+    public async Task<IActionResult> MakeMove([FromRoute] int gameId, [FromBody] GameMove move)
+    {
+        var result = await _gamesService.MakeMoveAsync(gameId, move);
+        return Ok(result);
     }
 }
