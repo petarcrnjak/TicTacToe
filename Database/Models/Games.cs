@@ -1,5 +1,5 @@
-﻿using TicTacToe.Enums;
-using TicTacToe.Extensions;
+﻿using TicTacToe.Contracts.Dtos;
+using TicTacToe.Enums;
 
 namespace TicTacToe.Database.Models;
 

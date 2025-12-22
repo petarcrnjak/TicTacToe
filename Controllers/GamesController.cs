@@ -10,9 +10,9 @@ namespace TicTacToe.Controllers;
 [Authorize]
 public class GamesController : ControllerBase
 {
-    private readonly IGamesService _gamesService;
+    private readonly IGameService _gamesService;
 
-    public GamesController(IGamesService gamesService)
+    public GamesController(IGameService gamesService)
     {
         _gamesService = gamesService;
     }

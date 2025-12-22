@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Net;
-using TicTacToe.Exceptions;
+using TicTacToe.Database.Exceptions;
 
 namespace TicTacToe.Middleware
 {

@@ -3,7 +3,7 @@ using TicTacToe.Contracts.Dtos;
 
 namespace TicTacToe.Services
 {
-    public interface IGamesService
+    public interface IGameService
     {
         Task<int?> StartGameAsync(CancellationToken cancellation = default);
         Task<List<GameDto>> GetGamesAsync(int page, int pageSize, CancellationToken cancellation = default);

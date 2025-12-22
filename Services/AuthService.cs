@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using TicTacToe.Authorization;
+using TicTacToe.Authorization.Validators;
 using TicTacToe.Contracts.Requests.Auth;
 using TicTacToe.Contracts.Responses.Auth;
 
@@ -20,15 +21,14 @@ namespace TicTacToe.Services
 
         public async Task<string> RegisterAsync(RegisterRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-                throw new ArgumentException("Username and password are required.", nameof(request));
+            AuthValidator.ValidateCredentials(request.Username, request.Password, nameof(request));
 
-            var existing = await _userManager.FindByNameAsync(request.Username);
+            var existing = await _userManager.FindByNameAsync(request.Username!);
             if (existing is not null)
                 throw new InvalidOperationException("Username already exists.");
 
             var user = new AppUser { UserName = request.Username };
-            var result = await _userManager.CreateAsync(user, request.Password);
+            var result = await _userManager.CreateAsync(user, request.Password!);
 
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
@@ -38,20 +38,18 @@ namespace TicTacToe.Services
 
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-                throw new ArgumentException("Username and password are required.", nameof(request));
+            AuthValidator.ValidateCredentials(request.Username, request.Password, nameof(request));
 
-            var user = await _userManager.FindByNameAsync(request.Username);
-            if (user is null)
-                throw new UnauthorizedAccessException("Invalid credentials.");
+            var user = await _userManager.FindByNameAsync(request.Username)
+                ?? throw new UnauthorizedAccessException("Invalid credentials.");
 
             var check = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
             if (!check.Succeeded)
                 throw new UnauthorizedAccessException("Invalid credentials.");
 
-            var token = _tokenService.GenerateJwt(user.Id, user.UserName ?? string.Empty);
+            var token = _tokenService.GenerateJwt(user.Id, user.UserName ?? request.Username);
 
-            return new LoginResponse { Token = token, Username = user.UserName ?? string.Empty };
+            return new LoginResponse { Token = token, Username = user.UserName ?? request.Username };
         }
     }
 }

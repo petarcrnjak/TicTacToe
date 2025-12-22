@@ -1,5 +1,4 @@
 using TicTacToe.Database.Models;
-using TicTacToe.Extensions;
 
 namespace TicTacToe.Contracts.Dtos;
 

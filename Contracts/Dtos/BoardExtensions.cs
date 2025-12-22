@@ -1,6 +1,6 @@
 using TicTacToe.Enums;
 
-namespace TicTacToe.Extensions
+namespace TicTacToe.Contracts.Dtos
 {
     public static class BoardExtensions
     {

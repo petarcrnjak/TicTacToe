@@ -32,13 +32,16 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<ITokenService, JwtTokenService>()
     .AddScoped<IAuthService, AuthService>()
-    .AddScoped<IGamesService, GamesService>()
+    .AddScoped<IGameService, GameService>()
+    .AddScoped<IUserService, UserService>()
+    .AddScoped<IPlayerStatsService, PlayerStatsService>()
     .AddScoped<IGameEngine, GameEngine>();
 
 builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqliteConnectionFactory(connectionString));
 
 builder.Services.AddScoped<IGamesRepository, GamesRepository>()
-.AddScoped<IUserContext, UserContext>();
+.AddScoped<IUserContext, UserContext>()
+.AddScoped<IUserRepository, UserRepository>();
 
 var app = builder.Build();
 

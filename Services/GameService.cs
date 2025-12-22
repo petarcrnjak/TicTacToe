@@ -1,37 +1,37 @@
-﻿using Microsoft.AspNetCore.Identity;
-using TicTacToe.Authorization;
+﻿using TicTacToe.Authorization;
 using TicTacToe.Contracts;
 using TicTacToe.Contracts.Dtos;
 using TicTacToe.Contracts.Requests;
-using TicTacToe.Database.Models;
+using TicTacToe.Database.Exceptions;
 using TicTacToe.Database.Repository;
 using TicTacToe.Enums;
-using TicTacToe.Exceptions;
 using TicTacToe.GameEngine;
+using TicTacToe.GameEngine.Validators;
 
 namespace TicTacToe.Services;
 
-public class GamesService : IGamesService
+public sealed class GameService : IGameService
 {
     private readonly IGamesRepository _gamesRepository;
     private readonly IUserContext _userContext;
-    private readonly UserManager<AppUser> _userManager;
     private readonly IGameEngine _gameEngine;
-    public GamesService(IGamesRepository gamesRepository, IUserContext userContext, UserManager<AppUser> usermanager, IGameEngine gameEngine)
+    private readonly IPlayerStatsService _playerStatsService;
+
+    public GameService(IGamesRepository gamesRepository, IUserContext userContext, IGameEngine gameEngine, IPlayerStatsService playerStatsService)
     {
         _gamesRepository = gamesRepository;
         _userContext = userContext;
-        _userManager = usermanager;
         _gameEngine = gameEngine;
+        _playerStatsService = playerStatsService;
     }
 
     public async Task<int?> StartGameAsync(CancellationToken cancellation = default)
     {
-        await EnsureUserExistsAsync(cancellation);
+        var userId = GetCurrentUserId();
 
         var newGame = new CreateGameRequest
         {
-            UserId = _userContext.UserId,
+            UserId = userId,
             CreatedUtc = DateTime.UtcNow,
             Status = GameStatus.Open
         };
@@ -48,13 +48,13 @@ public class GamesService : IGamesService
 
     public async Task<GameFieldDto> GetGameBoardByIdAsync(int gameId, CancellationToken cancellation = default)
     {
-        var board = await GetGameOrThrowAsync(gameId, _gamesRepository.GetGameBoardById, cancellation);
+        var board = await _gamesRepository.GetGameBoardByIdOrThrowAsync(gameId, cancellation);
         return board.ToBoardDto();
     }
 
     public async Task<GameStatusDto> JoinGameAsync(int gameId, CancellationToken cancellation = default)
     {
-        var game = await GetGameOrThrowAsync(gameId, _gamesRepository.GetOpenGameByIdAsync, cancellation, "Game with id {0} was not found or is not joinable.");
+        var game = await _gamesRepository.GetOpenGameByIdOrThrowAsync(gameId, cancellation, "Game with id {0} was not found or is not joinable.");
 
         var gameDto = game.ToDto();
         var currentUserId = _userContext.UserId.ToString();
@@ -66,18 +66,18 @@ public class GamesService : IGamesService
         if (!joined)
             throw new InvalidOperationException("Unable to join the game (it may have been taken).");
 
-        var updated = await GetGameOrThrowAsync(gameId, _gamesRepository.GetGameByIdAsync, cancellation, "Game with id {0} was not found after join.");
+        var updated = await _gamesRepository.GetGameByIdOrThrowAsync(gameId, cancellation, "Game with id {0} was not found after join.");
         return updated.ToStatusDto();
     }
 
     public async Task<GameStatusDto> PlayGameAsync(int gameId, GameMove requestedMove, CancellationToken cancellation = default)
     {
-        var currentUserId = GetCurrentUserId();
+        var currentUserId = GetCurrentUserId().ToString();
 
-        var game = await GetGameOrThrowAsync(gameId, _gamesRepository.GetGameByIdAsync, cancellation);
+        var game = await _gamesRepository.GetGameByIdOrThrowAsync(gameId, cancellation);
         var gameDto = game.ToDto();
 
-        ValidateGameTurn(gameDto, currentUserId, gameId);
+        GameValidator.ValidateGameTurn(gameDto, currentUserId, gameId);
 
         if (string.IsNullOrEmpty(gameDto.Board))
             throw new NotFoundException($"Board for game {gameId} was not found.");
@@ -108,34 +108,10 @@ public class GamesService : IGamesService
         if (moved == null)
             throw new InvalidOperationException("Unable to make the move (it may be invalid).");
 
+        await _playerStatsService.UpdatePlayerStatsAsync(gameDto, moved);
+
         return moved.ToStatusDto();
     }
 
-    private string GetCurrentUserId() => _userContext.UserId.ToString();
-
-    private static void ValidateGameTurn(GameDto gameDto, string currentUserId, int gameId)
-    {
-        if (gameDto.Status != GameStatus.InProgress || gameDto.NextTurn != currentUserId)
-            throw new NotFoundException($"Game with id {gameId} is not started or it's not your turn");
-    }
-
-    private async Task EnsureUserExistsAsync(CancellationToken cancellation)
-    {
-        var currentUserId = _userContext.UserId;
-        var user = await _userManager.FindByIdAsync(currentUserId.ToString());
-        if (user == null)
-            throw new NotFoundException($"User with id {currentUserId} was not found.");
-    }
-
-    private static async Task<Games> GetGameOrThrowAsync(int gameId,
-     Func<int, CancellationToken, Task<Games?>> repositoryMethod,
-     CancellationToken cancellation,
-     string? errorMessage = null)
-    {
-        var game = await repositoryMethod(gameId, cancellation);
-        if (game == null)
-            throw new NotFoundException(string.Format(errorMessage ?? "Game with id {0} was not found", gameId));
-
-        return game;
-    }
+    private Guid GetCurrentUserId() => _userContext.UserId;
 }

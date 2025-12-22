@@ -1,4 +1,4 @@
-namespace TicTacToe.Exceptions
+namespace TicTacToe.Database.Exceptions
 {
     public sealed class NotFoundException : Exception
     {
@@ -14,4 +14,4 @@ namespace TicTacToe.Exceptions
         {
         }
     }
-}   
+}
