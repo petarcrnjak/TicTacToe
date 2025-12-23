@@ -1,8 +1,9 @@
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 using TicTacToe.Enums;
 
-namespace TicTacToe.Extensions
+namespace TicTacToe.Extensions.Swagger
 {
     public static class SwaggerServiceExtensions
     {
@@ -12,7 +13,25 @@ namespace TicTacToe.Extensions
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "TicTacToe API", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "TicTacToe API",
+                    Version = "v1",
+                    Description = "API for playing TicTacToe: register and authenticate users, create and manage games.",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "TicTacToe Maintainer",
+                        Url = new Uri("https://github.com/petarcrnjak")
+                    }
+                });
+
+                // include XML comments (enable XML documentation file generation in the project file)
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                if (File.Exists(xmlPath))
+                {
+                    c.IncludeXmlComments(xmlPath);
+                }
 
                 // Map GameStatus enum to string values in Swagger (UI will show "Open", "InProgress", "Finished")
                 c.MapType<GameStatus>(() => new OpenApiSchema
@@ -48,6 +67,9 @@ namespace TicTacToe.Extensions
                         Array.Empty<string>()
                     }
                 });
+
+                // Add tag descriptions for controllers (e.g. Auth)
+                c.DocumentFilter<SwaggerTagDocumentFilter>();
             });
 
             return services;

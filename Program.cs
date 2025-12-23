@@ -12,8 +12,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerWithJwt();
 
 // SQLite DbContext
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-    "Data Source=tictactoe.db;Cache=Shared;Pooling=True;Mode=ReadWriteCreate;Journal Mode=WAL;BusyTimeout=5000";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseSqlite(connectionString);
@@ -54,7 +53,7 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy", utcNow = DateTime.UtcNow }));
+app.MapHealthEndpoint();
 
 app.UseHttpsRedirection();
 
