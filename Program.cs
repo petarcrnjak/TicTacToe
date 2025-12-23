@@ -3,6 +3,7 @@ using TicTacToe.Authorization;
 using TicTacToe.Database;
 using TicTacToe.Database.Repository;
 using TicTacToe.Extensions;
+using TicTacToe.Extensions.Swagger;
 using TicTacToe.GameEngine;
 using TicTacToe.Services;
 
